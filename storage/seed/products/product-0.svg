@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+  <rect width="800" height="800" fill="#0f766e"/>
+  <circle cx="590" cy="190" r="92" fill="#f8fafc" opacity=".18"/>
+  <rect x="210" y="190" width="380" height="430" rx="44" fill="#f8fafc"/>
+  <path d="M280 300h240v42H280zm0 88h190v38H280zm0 82h150v38H280z" fill="#0f766e"/>
+  <text x="400" y="700" text-anchor="middle" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#ffffff">Apparel</text>
+</svg>

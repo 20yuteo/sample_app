@@ -1,0 +1,137 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: commerce
+      POSTGRES_PASSWORD: commerce
+      POSTGRES_DB: commerce
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U commerce -d commerce"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  storage:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    command: server /data --console-address ":9001"
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+
+  storage-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+      PRODUCT_IMAGE_BUCKET: commerce-images
+    volumes:
+      - ./storage/seed:/seed:ro
+    entrypoint: ["/bin/sh"]
+    command:
+      - "-c"
+      - |
+        until mc alias set local http://storage:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"; do
+          sleep 1
+        done
+        mc mb --ignore-existing "local/$$PRODUCT_IMAGE_BUCKET"
+        mc anonymous set download "local/$$PRODUCT_IMAGE_BUCKET"
+        mc cp --recursive /seed/products "local/$$PRODUCT_IMAGE_BUCKET/"
+        echo "storage initialized"
+    depends_on:
+      - storage
+
+  auth:
+    image: quay.io/keycloak/keycloak:26.3.3
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin123
+    command: start-dev --import-realm --http-port=8080
+    ports:
+      - "${KEYCLOAK_PORT:-18080}:8080"
+    volumes:
+      - ./auth/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+      - keycloak-data:/opt/keycloak/data
+
+  auth-init:
+    image: quay.io/keycloak/keycloak:26.3.3
+    entrypoint: ["/bin/sh"]
+    command:
+      - "-c"
+      - |
+        until /opt/keycloak/bin/kcadm.sh config credentials --server http://auth:8080 --realm master --user admin --password admin123; do
+          sleep 2
+        done
+        /opt/keycloak/bin/kcadm.sh create users -r master -s username=admin@example.test -s email=admin@example.test -s enabled=true -s emailVerified=true || true
+        /opt/keycloak/bin/kcadm.sh set-password -r master --username admin@example.test --new-password admin123
+        /opt/keycloak/bin/kcadm.sh add-roles -r master --uusername admin@example.test --rolename admin || true
+        FRONTEND_CLIENT_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r commerce -q clientId=commerce-frontend --fields id --format csv --noquotes)
+        ADMIN_CLIENT_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r commerce -q clientId=commerce-admin --fields id --format csv --noquotes)
+        /opt/keycloak/bin/kcadm.sh update "clients/$$FRONTEND_CLIENT_ID" -r commerce -s 'redirectUris=["http://localhost:3000/*","http://localhost:3000/auth/callback"]' -s 'webOrigins=["http://localhost:3000"]'
+        /opt/keycloak/bin/kcadm.sh update "clients/$$ADMIN_CLIENT_ID" -r commerce -s 'redirectUris=["http://localhost:3000/admin/*","http://localhost:3000/auth/callback"]' -s 'webOrigins=["http://localhost:3000"]'
+        echo "auth admin user initialized"
+    depends_on:
+      - auth
+
+  migrate:
+    image: postgres:16-alpine
+    environment:
+      PGPASSWORD: commerce
+    volumes:
+      - ./db/migrations:/migrations:ro
+    command: >
+      sh -c 'for migration in /migrations/*.sql; do
+        echo "applying $$migration";
+        psql -h postgres -U commerce -d commerce -v ON_ERROR_STOP=1 -f "$$migration";
+      done'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgres://commerce:commerce@postgres:5432/commerce?sslmode=disable
+      API_ADDR: :8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+        NEXT_PUBLIC_AUTH_ISSUER: http://localhost:18080/realms/commerce
+        NEXT_PUBLIC_AUTH_CLIENT_ID: commerce-frontend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+      NEXT_PUBLIC_AUTH_ISSUER: http://localhost:18080/realms/commerce
+      NEXT_PUBLIC_AUTH_CLIENT_ID: commerce-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_started
+      storage-init:
+        condition: service_completed_successfully
+      auth:
+        condition: service_started
+      auth-init:
+        condition: service_completed_successfully
+
+volumes:
+  postgres-data:
+  minio-data:
+  keycloak-data:
