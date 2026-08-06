@@ -164,21 +164,3 @@ CREATE TABLE IF NOT EXISTS reviews (
   body TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
-CREATE INDEX IF NOT EXISTS idx_products_category_status_price ON products(category_id, status, price_cents);
-CREATE INDEX IF NOT EXISTS idx_products_brand_status ON products(brand_id, status);
-CREATE INDEX IF NOT EXISTS idx_products_created_at ON products(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_products_search_vector ON products USING GIN(search_vector);
-CREATE INDEX IF NOT EXISTS idx_orders_customer_ordered_at ON orders(customer_id, ordered_at DESC);
-CREATE INDEX IF NOT EXISTS idx_orders_ordered_at_status ON orders(ordered_at DESC, status);
-CREATE INDEX IF NOT EXISTS idx_order_items_product_id ON order_items(product_id);
-CREATE INDEX IF NOT EXISTS idx_reviews_product_created_at ON reviews(product_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_auth_users_account_type_created_at ON auth_users(account_type, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_auth_users_customer_id ON auth_users(customer_id) WHERE customer_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_order_status_events_order_occurred_at ON order_status_events(order_id, occurred_at DESC);
-CREATE INDEX IF NOT EXISTS idx_order_status_events_status_occurred_at ON order_status_events(status, occurred_at DESC);
-CREATE INDEX IF NOT EXISTS idx_shipments_order_id ON shipments(order_id);
-CREATE INDEX IF NOT EXISTS idx_shipments_status_created_at ON shipments(status, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_shipment_events_shipment_occurred_at ON shipment_events(shipment_id, occurred_at DESC);
-CREATE INDEX IF NOT EXISTS idx_order_admin_notes_order_created_at ON order_admin_notes(order_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_order_admin_notes_admin_created_at ON order_admin_notes(admin_user_id, created_at DESC);

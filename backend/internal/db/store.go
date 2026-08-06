@@ -100,7 +100,14 @@ func (s *Store) ListProducts(ctx context.Context, filters ProductFilters) ([]Pro
 			LIMIT 1
 		) pi ON true
 		WHERE p.status = 'active'
-			AND ($1 = '' OR p.search_vector @@ plainto_tsquery('simple', $1))
+			AND (
+				$1 = ''
+				OR (
+					setweight(to_tsvector('simple', coalesce(p.name, '')), 'A') ||
+					setweight(to_tsvector('simple', coalesce(p.description, '')), 'B') ||
+					setweight(to_tsvector('simple', coalesce(p.sku, '')), 'A')
+				) @@ plainto_tsquery('simple', $1)
+			)
 			AND ($2::bigint = 0 OR p.category_id = $2)
 			AND ($3::integer = 0 OR p.price_cents >= $3)
 			AND ($4::integer = 0 OR p.price_cents <= $4)
