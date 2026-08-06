@@ -34,6 +34,21 @@ Object storage: http://localhost:9001
 Auth server: http://localhost:18080
 Frontend login: http://localhost:3000/login
 
+## Container Images
+
+Build the production images for ECS/ECR:
+
+```bash
+docker build -t commerce-lab-backend:latest ./backend
+docker build \
+  --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.example.com \
+  --build-arg NEXT_PUBLIC_AUTH_ISSUER=https://auth.example.com/realms/commerce \
+  --build-arg NEXT_PUBLIC_AUTH_CLIENT_ID=commerce-frontend \
+  -t commerce-lab-frontend:latest ./frontend
+```
+
+The frontend `NEXT_PUBLIC_*` values are compiled into the browser bundle, so set them to the target environment URLs at image build time.
+
 MinIO login:
 
 - User: `minio`

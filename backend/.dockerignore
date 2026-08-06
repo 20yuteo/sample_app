@@ -2,3 +2,8 @@
 bin
 coverage
 *.test
+.env*
+.git
+.gitignore
+Dockerfile
+README*

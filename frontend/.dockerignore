@@ -5,3 +5,7 @@ coverage
 *.tsbuildinfo
 .env*
 npm-debug.log*
+.git
+.gitignore
+Dockerfile
+README*
