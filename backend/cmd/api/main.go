@@ -30,7 +30,7 @@ func main() {
 	}
 	defer pool.Close()
 
-	handler := httpapi.New(db.New(pool))
+	handler := httpapi.New(db.New(pool), cfg.CORSAllowedOrigins)
 	server := &http.Server{
 		Addr:              cfg.APIAddr,
 		Handler:           handler,

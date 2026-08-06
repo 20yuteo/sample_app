@@ -17,7 +17,7 @@ type Server struct {
 	store *db.Store
 }
 
-func New(store *db.Store) http.Handler {
+func New(store *db.Store, allowedOrigins []string) http.Handler {
 	server := &Server{store: store}
 	router := chi.NewRouter()
 
@@ -25,7 +25,7 @@ func New(store *db.Store) http.Handler {
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Timeout(10 * time.Second))
 	router.Use(cors.Handler(cors.Options{
-		AllowedOrigins: []string{"http://localhost:3000"},
+		AllowedOrigins: allowedOrigins,
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type"},
 		MaxAge:         300,

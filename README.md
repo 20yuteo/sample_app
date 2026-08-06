@@ -2,16 +2,16 @@
 
 Next.js + Go + PostgreSQL の EC サイトサンプルです。
 
-## Stack
+## 技術スタック
 
-- Frontend: Next.js App Router, TypeScript, Tailwind CSS, TanStack Query, Zod
-- Backend: Go, chi, pgxpool, zerolog
+- フロントエンド: Next.js App Router, TypeScript, Tailwind CSS, TanStack Query, Zod
+- バックエンド: Go, chi, pgxpool, zerolog
 - DB: PostgreSQL
-- Seed: Go command with batched inserts and PostgreSQL `COPY`
+- Seed: Go コマンドによるバッチ insert と PostgreSQL `COPY`
 
-Node.js is pinned by Volta in `frontend/package.json`: Node `22.17.0`, npm `10.9.2`.
+Node.js は `frontend/package.json` の Volta 設定で固定しています: Node `22.17.0`, npm `10.9.2`。
 
-## Quick Start
+## クイックスタート
 
 ```bash
 cp .env.example .env
@@ -22,21 +22,21 @@ docker compose up backend
 cd frontend && npm install && npm run dev
 ```
 
-Or run the application stack with Docker:
+Docker だけでアプリケーション全体を起動する場合:
 
 ```bash
 docker compose up --build
 ```
 
-Frontend: http://localhost:3000
-Backend: http://localhost:8080
-Object storage: http://localhost:9001
-Auth server: http://localhost:18080
-Frontend login: http://localhost:3000/login
+フロントエンド: http://localhost:3000
+バックエンド: http://localhost:8080
+オブジェクトストレージ: http://localhost:9001
+認証サーバー: http://localhost:18080
+フロントエンドログイン: http://localhost:3000/login
 
-## Container Images
+## コンテナイメージ
 
-Build the production images for ECS/ECR:
+ECS/ECR 向けの本番用イメージをビルドします:
 
 ```bash
 docker build -t commerce-lab-backend:latest ./backend
@@ -47,25 +47,27 @@ docker build \
   -t commerce-lab-frontend:latest ./frontend
 ```
 
-The frontend `NEXT_PUBLIC_*` values are compiled into the browser bundle, so set them to the target environment URLs at image build time.
+フロントエンドの `NEXT_PUBLIC_*` はブラウザ向けバンドルに埋め込まれるため、イメージのビルド時にデプロイ先環境のURLを指定してください。
 
-MinIO login:
+ECS/Fargate のデプロイテンプレート、GitHub Actions workflow、ECR push 用スクリプトは `deploy/aws/` と `.github/workflows/` にあります。
 
-- User: `minio`
-- Password: `minio123`
+MinIO ログイン:
 
-Product images are stored in the `commerce-images` bucket and seeded under `products/`.
+- ユーザー: `minio`
+- パスワード: `minio123`
 
-Keycloak login:
+商品画像は `commerce-images` バケットに保存され、`products/` 配下に seed されます。
 
-- Admin console user: `admin@example.test`
-- Admin console password: `admin123`
-- Bootstrap admin user: `admin` / `admin123`
+Keycloak ログイン:
+
+- 管理コンソールユーザー: `admin@example.test`
+- 管理コンソールパスワード: `admin123`
+- ブートストラップ管理ユーザー: `admin` / `admin123`
 - Realm: `commerce`
-- Demo customer: `customer@example.test` / `customer123`
-- Demo EC admin in `commerce` realm: `admin@example.test` / `admin123`
+- デモ顧客: `customer@example.test` / `customer123`
+- `commerce` realm のデモ EC 管理者: `admin@example.test` / `admin123`
 
-If local port `5432` is already used:
+ローカルの `5432` ポートがすでに使われている場合:
 
 ```bash
 POSTGRES_PORT=55432 docker compose up -d postgres
@@ -73,9 +75,9 @@ DATABASE_URL=postgres://commerce:commerce@localhost:55432/commerce?sslmode=disab
 DATABASE_URL=postgres://commerce:commerce@localhost:55432/commerce?sslmode=disable ./scripts/seed.sh
 ```
 
-## Seed Scale
+## Seed 規模
 
-Default scale is `dev`.
+デフォルトの規模は `dev` です。
 
 ```bash
 SEED_SCALE=30k ./scripts/seed.sh
@@ -85,9 +87,9 @@ SEED_SCALE=medium ./scripts/seed.sh
 SEED_SCALE=large ./scripts/seed.sh
 ```
 
-Approximate generated rows:
+生成されるおおよその行数:
 
-| Scale | Products | Customers | Admins | Orders | Order items | Auth users | Status events | Shipments | Shipment events | Admin notes | Reviews |
+| 規模 | 商品 | 顧客 | 管理者 | 注文 | 注文明細 | 認証ユーザー | ステータスイベント | 配送 | 配送イベント | 管理メモ | レビュー |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 30k | 30,000 | 30,000 | 30,000 | 30,000 | 30,000 | 60,000 | 30,000 | 30,000 | 30,000 | 30,000 | 30,000 |
 | 100k | 100,000 | 100,000 | 100,000 | 100,000 | 100,000 | 200,000 | 100,000 | 100,000 | 100,000 | 100,000 | 100,000 |
@@ -99,7 +101,7 @@ Approximate generated rows:
 
 `30k` と `100k` は各 seed 対象データを同じ件数に揃える検証用プリセットです。顧客アカウントと EC 管理者アカウントをそれぞれ作るため、`auth_users` は合計で指定件数の 2 倍になります。
 
-## Useful Commands
+## よく使うコマンド
 
 ```bash
 docker compose up -d postgres

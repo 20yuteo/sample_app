@@ -1,0 +1,54 @@
+{
+  "family": "commerce-lab-backend",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "<ECS_EXECUTION_ROLE_ARN>",
+  "taskRoleArn": "<ECS_TASK_ROLE_ARN>",
+  "containerDefinitions": [
+    {
+      "name": "backend",
+      "image": "<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/commerce-lab-backend:<IMAGE_TAG>",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "API_ADDR",
+          "value": ":8080"
+        },
+        {
+          "name": "CORS_ALLOWED_ORIGINS",
+          "value": "<FRONTEND_PUBLIC_URL>"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "<DATABASE_URL_SECRET_ARN>"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/commerce-lab-backend",
+          "awslogs-region": "<AWS_REGION>",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz >/dev/null || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 10
+      }
+    }
+  ]
+}
