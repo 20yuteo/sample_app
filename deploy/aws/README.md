@@ -12,9 +12,10 @@
 
 ## 必要な AWS リソース
 
-- ECR リポジトリ2つ:
+- ECR リポジトリ3つ:
   - `commerce-lab-backend`
   - `commerce-lab-frontend`
+  - `commerce-lab-db-migrate`
 - ECS クラスター。例: `commerce-lab`
 - ECR pull と CloudWatch Logs への書き込み権限を持つ ECS task execution role
 - 次の通信を許可する security group:
@@ -24,10 +25,11 @@
 - CloudWatch log group:
   - `/ecs/commerce-lab-backend`
   - `/ecs/commerce-lab-frontend`
+  - `/ecs/commerce-lab-db-migrate`
 
 ## GitHub Actions でのビルドとプッシュ
 
-`main` ブランチに push されると、`.github/workflows/build-and-push-images.yml` が backend/frontend の Docker イメージをビルドし、ECR に push します。
+`main` ブランチに push されると、`.github/workflows/build-and-push-images.yml` が backend/frontend/db-migrate の Docker イメージをビルドし、ECR に push します。
 
 GitHub リポジトリに次の Variables を設定してください:
 
@@ -83,12 +85,15 @@ task definition JSON のプレースホルダを実値に置き換えます:
 - `<ECS_TASK_ROLE_ARN>`
 - `<DATABASE_URL_SECRET_ARN>`
 - `<FRONTEND_PUBLIC_URL>`
+- `<ADMIN_DATABASE_URL_SECRET_ARN>`
+- `<APP_DATABASE_URL_SECRET_ARN>`
 
 置き換えたら登録します:
 
 ```bash
 aws ecs register-task-definition --cli-input-json file://deploy/aws/backend-task-definition.json
 aws ecs register-task-definition --cli-input-json file://deploy/aws/frontend-task-definition.json
+aws ecs register-task-definition --cli-input-json file://deploy/aws/db-migrate-task-definition.json
 ```
 
 登録した task definition から ECS サービスを作成または更新します。target group のヘルスチェックは次のように設定します:
@@ -109,3 +114,24 @@ aws ecs register-task-definition --cli-input-json file://deploy/aws/frontend-tas
 - `NEXT_PUBLIC_API_BASE_URL=https://api.example.com`
 - `NEXT_PUBLIC_AUTH_ISSUER=https://auth.example.com/realms/commerce`
 - `NEXT_PUBLIC_AUTH_CLIENT_ID=commerce-frontend`
+
+## RDS 初期化とマイグレーション
+
+RDS が private subnet にある場合は、ECS の一時タスクでDB作成とmigrationを実行します。
+
+migration用イメージをビルドしてpushします:
+
+```bash
+export DB_MIGRATE_IMAGE="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/commerce-lab-db-migrate:$IMAGE_TAG"
+docker build -f deploy/aws/db-migrate.Dockerfile -t "$DB_MIGRATE_IMAGE" .
+docker push "$DB_MIGRATE_IMAGE"
+```
+
+Secrets Manager には次の2つを用意します:
+
+- `ADMIN_DATABASE_URL`: `postgres://postgres:<password>@<rds-endpoint>:5432/postgres?sslmode=require`
+- `APP_DATABASE_URL`: `postgres://postgres:<password>@<rds-endpoint>:5432/commerce?sslmode=require`
+
+`db-migrate-task-definition.json` のプレースホルダを置き換えて登録し、`commerce-lab-db-migrate` taskをECSから1回実行します。タスクは `commerce` databaseがなければ作成し、`db/migrations/*.sql` を適用します。
+
+成功後、Backend用の `DATABASE_URL` secretも `.../commerce?sslmode=require` に更新し、Backend serviceを新しいデプロイで再起動します。

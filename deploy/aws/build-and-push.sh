@@ -11,8 +11,10 @@ AUTH_CLIENT_ID="${AUTH_CLIENT_ID:-commerce-frontend}"
 REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 BACKEND_IMAGE="${REGISTRY}/commerce-lab-backend:${IMAGE_TAG}"
 FRONTEND_IMAGE="${REGISTRY}/commerce-lab-frontend:${IMAGE_TAG}"
+DB_MIGRATE_IMAGE="${REGISTRY}/commerce-lab-db-migrate:${IMAGE_TAG}"
 
 docker build -t "${BACKEND_IMAGE}" ./backend
+docker build -f deploy/aws/db-migrate.Dockerfile -t "${DB_MIGRATE_IMAGE}" .
 docker build \
   --build-arg NEXT_PUBLIC_API_BASE_URL="${BACKEND_PUBLIC_URL}" \
   --build-arg NEXT_PUBLIC_AUTH_ISSUER="${AUTH_ISSUER}" \
@@ -20,7 +22,9 @@ docker build \
   -t "${FRONTEND_IMAGE}" ./frontend
 
 docker push "${BACKEND_IMAGE}"
+docker push "${DB_MIGRATE_IMAGE}"
 docker push "${FRONTEND_IMAGE}"
 
 echo "BACKEND_IMAGE=${BACKEND_IMAGE}"
+echo "DB_MIGRATE_IMAGE=${DB_MIGRATE_IMAGE}"
 echo "FRONTEND_IMAGE=${FRONTEND_IMAGE}"

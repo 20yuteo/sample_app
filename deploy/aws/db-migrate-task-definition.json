@@ -1,0 +1,40 @@
+{
+  "family": "commerce-lab-db-migrate",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "<ECS_EXECUTION_ROLE_ARN>",
+  "taskRoleArn": "<ECS_TASK_ROLE_ARN>",
+  "containerDefinitions": [
+    {
+      "name": "db-migrate",
+      "image": "<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/commerce-lab-db-migrate:<IMAGE_TAG>",
+      "essential": true,
+      "environment": [
+        {
+          "name": "APP_DATABASE_NAME",
+          "value": "commerce"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "ADMIN_DATABASE_URL",
+          "valueFrom": "<ADMIN_DATABASE_URL_SECRET_ARN>"
+        },
+        {
+          "name": "APP_DATABASE_URL",
+          "valueFrom": "<APP_DATABASE_URL_SECRET_ARN>"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/commerce-lab-db-migrate",
+          "awslogs-region": "<AWS_REGION>",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
